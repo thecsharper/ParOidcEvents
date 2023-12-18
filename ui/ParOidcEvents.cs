@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Text.Json.Serialization;
 using IdentityModel.Client;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -10,7 +9,7 @@ namespace WebCodeFlowPkceClient;
 /// original code src:
 /// https://github.com/DuendeSoftware/IdentityServer
 /// </summary>
-public class ParOidcEvents(HttpClient httpClient, IDiscoveryCache discoveryCache, ILogger<ParOidcEvents> logger, IConfiguration configuration) : OpenIdConnectEvents
+public partial class ParOidcEvents(HttpClient httpClient, IDiscoveryCache discoveryCache, ILogger<ParOidcEvents> logger, IConfiguration configuration) : OpenIdConnectEvents
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly IDiscoveryCache _discoveryCache = discoveryCache;
@@ -51,8 +50,7 @@ public class ParOidcEvents(HttpClient httpClient, IDiscoveryCache discoveryCache
         // here. See https://github.com/dotnet/aspnetcore/blob/c85baf8db0c72ae8e68643029d514b2e737c9fae/src/Security/Authentication/OpenIdConnect/src/OpenIdConnectHandler.cs#L364
         if (string.IsNullOrEmpty(message.IssuerAddress))
         {
-            throw new InvalidOperationException(
-                "Cannot redirect to the authorization endpoint, the configuration may be missing or invalid.");
+            throw new InvalidOperationException("Cannot redirect to the authorization endpoint, the configuration may be missing or invalid.");
         }
 
         if (context.Options.AuthenticationMethod == OpenIdConnectRedirectBehavior.RedirectGet)
@@ -111,8 +109,9 @@ public class ParOidcEvents(HttpClient httpClient, IDiscoveryCache discoveryCache
             throw new Exception("PAR failure");
         }
 
-        return await response.Content.ReadFromJsonAsync<ParResponse>();
+        var parResponse = await response.Content.ReadFromJsonAsync<ParResponse>();
 
+        return parResponse!;
     }
 
     private static void SetAuthorizeParameters(RedirectContext context, string clientId, ParResponse parResponse)
@@ -137,14 +136,5 @@ public class ParOidcEvents(HttpClient httpClient, IDiscoveryCache discoveryCache
     public override Task TokenResponseReceived(TokenResponseReceivedContext context)
     {
         return base.TokenResponseReceived(context);
-    }
-
-    private class ParResponse
-    {
-        [JsonPropertyName("expires_in")]
-        public int ExpiresIn { get; set; }
-
-        [JsonPropertyName("request_uri")]
-        public string RequestUri { get; set; } = string.Empty;
     }
 }
